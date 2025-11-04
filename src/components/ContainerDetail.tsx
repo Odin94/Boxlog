@@ -3,16 +3,17 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight } from "lucide-react"
-import type { Container, ContentImage } from "@/components/types"
+import type { Container, ContentImage, Category } from "@/components/types"
 
 type ContainerDetailProps = {
     container: Container
+    categories: Category[]
     onBack: () => void
     onNameChange: (id: string, name: string) => void
     onContentImagesChange: (id: string, images: ContentImage[]) => void
 }
 
-export function ContainerDetail({ container, onBack, onNameChange, onContentImagesChange }: ContainerDetailProps) {
+export function ContainerDetail({ container, categories, onBack, onNameChange, onContentImagesChange }: ContainerDetailProps) {
     const [isEditingName, setIsEditingName] = useState(false)
     const [nameValue, setNameValue] = useState(container.name)
     const [isDragging, setIsDragging] = useState(false)
@@ -152,6 +153,11 @@ export function ContainerDetail({ container, onBack, onNameChange, onContentImag
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to containers
                 </Button>
+                {container.categoryId &&
+                    (() => {
+                        const category = categories.find((c) => c.id === container.categoryId)
+                        return category ? <p className="text-sm text-muted-foreground mb-1">{category.name}</p> : null
+                    })()}
                 {isEditingName ? (
                     <div className="flex gap-2 items-center">
                         <Input
