@@ -6,6 +6,7 @@ import { Plus, FolderPlus } from "lucide-react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CategorySection } from "./CategorySection"
+import { ContainerCard } from "./ContainerCard"
 import type { Container, Category, ContentImage } from "@/components/types"
 
 type ContainerGridProps = {
@@ -42,6 +43,7 @@ export function ContainerGrid({
     onMoveCategoryDown,
 }: ContainerGridProps) {
     const [activeId, setActiveId] = useState<string | null>(null)
+    const [draggedContainer, setDraggedContainer] = useState<Container | null>(null)
 
     const uncategorizedContainers = containers.filter((c) => !c.categoryId).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     const sortedCategories = [...categories].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -52,13 +54,20 @@ export function ContainerGrid({
         canMoveDown: index < sortedCategories.length - 1,
     }))
 
+    // Check if a container (not a category) is being dragged
+    const isContainerDragging = activeId ? containers.some((c) => c.id === activeId) : false
+
     const handleDragStart = (event: DragStartEvent) => {
-        setActiveId(event.active.id as string)
+        const containerId = event.active.id as string
+        setActiveId(containerId)
+        const container = containers.find((c) => c.id === containerId)
+        setDraggedContainer(container || null)
     }
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
         setActiveId(null)
+        setDraggedContainer(null)
 
         if (!over) return
 
@@ -123,6 +132,7 @@ export function ContainerGrid({
                             {uncategorizedContainers.length > 0 && (
                                 <CategorySection
                                     containers={uncategorizedContainers}
+                                    activeDragId={activeId}
                                     onContainerClick={onContainerClick}
                                     onNameChange={onNameChange}
                                     onCoverImageChange={onCoverImageChange}
@@ -136,7 +146,7 @@ export function ContainerGrid({
                                 {categorizedContainers.map(({ category, containers: categoryContainers, canMoveUp, canMoveDown }) => (
                                     <motion.div
                                         key={category.id}
-                                        layout
+                                        layout={!isContainerDragging}
                                         initial={{ opacity: 0, y: -20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -20 }}
@@ -145,6 +155,7 @@ export function ContainerGrid({
                                         <CategorySection
                                             category={category}
                                             containers={categoryContainers}
+                                            activeDragId={activeId}
                                             onContainerClick={onContainerClick}
                                             onNameChange={onNameChange}
                                             onCoverImageChange={onCoverImageChange}
@@ -164,9 +175,15 @@ export function ContainerGrid({
                 </SortableContext>
 
                 <DragOverlay>
-                    {activeId ? (
-                        <div className="opacity-50">
-                            <div className="bg-card border rounded-lg p-4 shadow-lg">Dragging...</div>
+                    {draggedContainer ? (
+                        <div className="opacity-80 rotate-2 shadow-2xl" style={{ width: "200px" }}>
+                            <ContainerCard
+                                container={draggedContainer}
+                                onNameChange={onNameChange}
+                                onCoverImageChange={onCoverImageChange}
+                                onContentImagesChange={onContentImagesChange}
+                                onClick={() => {}}
+                            />
                         </div>
                     ) : null}
                 </DragOverlay>

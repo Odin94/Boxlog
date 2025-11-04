@@ -11,6 +11,7 @@ import type { Container, Category, ContentImage } from "@/components/types"
 type CategorySectionProps = {
     category?: Category
     containers: Container[]
+    activeDragId?: string | null
     onContainerClick: (container: Container) => void
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
@@ -26,6 +27,7 @@ type CategorySectionProps = {
 export function CategorySection({
     category,
     containers,
+    activeDragId,
     onContainerClick,
     onNameChange,
     onCoverImageChange,
@@ -67,9 +69,13 @@ export function CategorySection({
         setDroppableRef(node)
     }
 
+    // Only apply transform if this category is being dragged, not when a container is being dragged
+    const isContainerDragging = activeDragId && containers.some((c) => c.id === activeDragId)
+    const shouldApplyTransform = isDragging && !isContainerDragging
+
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
+        transform: shouldApplyTransform ? CSS.Transform.toString(transform) : undefined,
+        transition: shouldApplyTransform ? transition : undefined,
         opacity: isDragging ? 0.5 : 1,
     }
 
@@ -161,6 +167,7 @@ export function CategorySection({
                         <DraggableContainerCard
                             key={container.id}
                             container={container}
+                            activeDragId={activeDragId}
                             onNameChange={onNameChange}
                             onCoverImageChange={onCoverImageChange}
                             onContentImagesChange={onContentImagesChange}
@@ -175,12 +182,14 @@ export function CategorySection({
 
 function DraggableContainerCard({
     container,
+    activeDragId,
     onNameChange,
     onCoverImageChange,
     onContentImagesChange,
     onClick,
 }: {
     container: Container
+    activeDragId?: string | null
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
     onContentImagesChange: (id: string, images: ContentImage[]) => void
@@ -190,10 +199,17 @@ function DraggableContainerCard({
         id: container.id,
     })
 
+    // Only apply transform if this container is being dragged
+    // When dragging between categories, don't apply transforms to other containers to prevent them from moving
+    const isDraggingThis = isDragging || container.id === activeDragId
+
     const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
+        // Only apply transform to the container being dragged
+        transform: isDraggingThis ? CSS.Transform.toString(transform) : undefined,
+        // Only apply transition to the container being dragged
+        transition: isDraggingThis ? transition : undefined,
+        // Hide the original container when dragging (will show in DragOverlay)
+        opacity: isDragging ? 0 : 1,
     }
 
     return (
