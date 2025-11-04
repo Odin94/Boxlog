@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ImagePlus, X } from "lucide-react"
+import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Container, ContentImage } from "@/components/types"
 
 type ContainerDetailProps = {
@@ -17,6 +17,7 @@ export function ContainerDetail({ container, onBack, onNameChange, onContentImag
     const [nameValue, setNameValue] = useState(container.name)
     const [isDragging, setIsDragging] = useState(false)
     const [imagesToRemove, setImagesToRemove] = useState<Set<string>>(new Set())
+    const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -96,6 +97,54 @@ export function ContainerDetail({ container, onBack, onNameChange, onContentImag
         setIsEditingName(false)
     }
 
+    const openLightbox = (imageId: string) => {
+        setLightboxImageId(imageId)
+    }
+
+    const closeLightbox = () => {
+        setLightboxImageId(null)
+    }
+
+    const nextImage = () => {
+        if (lightboxImageId !== null) {
+            const visibleImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
+            const currentIndex = visibleImages.findIndex((img) => img.id === lightboxImageId)
+            if (currentIndex !== -1) {
+                const nextIndex = (currentIndex + 1) % visibleImages.length
+                setLightboxImageId(visibleImages[nextIndex].id)
+            }
+        }
+    }
+
+    const previousImage = () => {
+        if (lightboxImageId !== null) {
+            const visibleImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
+            const currentIndex = visibleImages.findIndex((img) => img.id === lightboxImageId)
+            if (currentIndex !== -1) {
+                const prevIndex = (currentIndex - 1 + visibleImages.length) % visibleImages.length
+                setLightboxImageId(visibleImages[prevIndex].id)
+            }
+        }
+    }
+
+    // Keyboard navigation for lightbox
+    useEffect(() => {
+        if (lightboxImageId === null) return
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                closeLightbox()
+            } else if (e.key === "ArrowRight") {
+                nextImage()
+            } else if (e.key === "ArrowLeft") {
+                previousImage()
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown)
+        return () => window.removeEventListener("keydown", handleKeyDown)
+    }, [lightboxImageId, container.contentImages, imagesToRemove])
+
     return (
         <div className="container mx-auto p-6 max-w-6xl">
             <div className="mb-6">
@@ -164,12 +213,16 @@ export function ContainerDetail({ container, onBack, onNameChange, onContentImag
                                         damping: 30,
                                         layout: { duration: 0.3 },
                                     }}
-                                    className="relative group"
+                                    className="relative group cursor-pointer"
+                                    onClick={() => openLightbox(image.id)}
                                 >
                                     <img src={image.url} alt={`Content ${index + 1}`} className="w-full h-64 object-cover rounded-lg" />
                                     <motion.button
-                                        onClick={() => handleRemoveImage(index)}
-                                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleRemoveImage(index)
+                                        }}
+                                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                         whileHover={{ scale: 1.1 }}
                                         whileTap={{ scale: 0.9 }}
                                     >
@@ -199,6 +252,77 @@ export function ContainerDetail({ container, onBack, onNameChange, onContentImag
                           : "Drag & drop photos here to add more"}
                 </p>
             </div>
+
+            {/* Lightbox */}
+            <AnimatePresence>
+                {lightboxImageId !== null && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+                        onClick={closeLightbox}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.8, opacity: 0 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {(() => {
+                                const visibleImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
+                                const currentImage = visibleImages.find((img) => img.id === lightboxImageId)
+                                if (!currentImage) return null
+
+                                const currentIndex = visibleImages.findIndex((img) => img.id === lightboxImageId)
+
+                                return (
+                                    <>
+                                        <img
+                                            src={currentImage.url}
+                                            alt={`Content ${currentIndex + 1}`}
+                                            className="max-w-full max-h-[90vh] object-contain rounded-lg"
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-4 right-4 bg-background/50 hover:bg-background/80"
+                                            onClick={closeLightbox}
+                                        >
+                                            <X className="h-6 w-6" />
+                                        </Button>
+                                        {visibleImages.length > 1 && (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-background/80"
+                                                    onClick={previousImage}
+                                                >
+                                                    <ChevronLeft className="h-8 w-8" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-background/50 hover:bg-background/80"
+                                                    onClick={nextImage}
+                                                >
+                                                    <ChevronRight className="h-8 w-8" />
+                                                </Button>
+                                            </>
+                                        )}
+                                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/50 px-4 py-2 rounded-md text-sm">
+                                            {currentIndex + 1} / {visibleImages.length}
+                                        </div>
+                                    </>
+                                )
+                            })()}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }
