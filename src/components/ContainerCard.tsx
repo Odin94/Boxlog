@@ -74,7 +74,7 @@ export function ContainerCard({
     <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={onClick}>
       <CardHeader className="pb-3">
         {isEditingName ? (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Input
               value={nameValue}
               onChange={(e) => setNameValue(e.target.value)}
@@ -87,6 +87,7 @@ export function ContainerCard({
                   setIsEditingName(false)
                 }
               }}
+              onClick={(e) => e.stopPropagation()}
               autoFocus
               className="h-8"
             />
@@ -127,7 +128,10 @@ export function ContainerCard({
               <Camera className="h-12 w-12 text-muted-foreground" />
             </div>
           )}
-          <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+          <label 
+            className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
             <input
               type="file"
               accept="image/*"
