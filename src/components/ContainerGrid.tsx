@@ -6,7 +6,7 @@ import { Plus, FolderPlus } from "lucide-react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { CategorySection } from "./CategorySection"
-import type { Container, Category } from "@/components/types"
+import type { Container, Category, ContentImage } from "@/components/types"
 
 type ContainerGridProps = {
     containers: Container[]
@@ -16,7 +16,7 @@ type ContainerGridProps = {
     onCreateCategory: () => void
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
-    onContentImagesChange: (id: string, images: string[]) => void
+    onContentImagesChange: (id: string, images: ContentImage[]) => void
     onCategoryNameChange: (id: string, name: string) => void
     onDeleteCategory: (id: string) => void
     onMoveContainerToCategory: (containerId: string, categoryId: string | undefined) => void

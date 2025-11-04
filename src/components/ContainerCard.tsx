@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Camera, Edit2, Image as ImageIcon } from "lucide-react"
 
+import type { ContentImage } from "./types"
+
 type ContainerCardProps = {
   container: {
     id: string
     name: string
     coverImage?: string
-    contentImages: string[]
+    contentImages: ContentImage[]
   }
   onNameChange: (id: string, name: string) => void
   onCoverImageChange: (id: string, image: string) => void
-  onContentImagesChange: (id: string, images: string[]) => void
+  onContentImagesChange: (id: string, images: ContentImage[]) => void
   onClick: () => void
 }
 
@@ -50,10 +52,12 @@ export function ContainerCard({
     const files = Array.from(e.target.files || [])
     if (files.length > 0) {
       const readers = files.map((file) => {
-        return new Promise<string>((resolve) => {
+        return new Promise<ContentImage>((resolve) => {
           const reader = new FileReader()
           reader.onload = (event) => {
-            resolve(event.target?.result as string)
+            const url = event.target?.result as string
+            const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+            resolve({ id, url })
           }
           reader.readAsDataURL(file)
         })

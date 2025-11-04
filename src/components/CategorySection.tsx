@@ -6,7 +6,7 @@ import { ContainerCard } from "./ContainerCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Edit2, Trash2, ChevronUp, ChevronDown } from "lucide-react"
-import type { Container, Category } from "@/components/types"
+import type { Container, Category, ContentImage } from "@/components/types"
 
 type CategorySectionProps = {
     category?: Category
@@ -14,7 +14,7 @@ type CategorySectionProps = {
     onContainerClick: (container: Container) => void
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
-    onContentImagesChange: (id: string, images: string[]) => void
+    onContentImagesChange: (id: string, images: ContentImage[]) => void
     onCategoryNameChange: (id: string, name: string) => void
     onDeleteCategory?: (id: string) => void
     onMoveCategoryUp?: (id: string) => void
@@ -183,7 +183,7 @@ function DraggableContainerCard({
     container: Container
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
-    onContentImagesChange: (id: string, images: string[]) => void
+    onContentImagesChange: (id: string, images: ContentImage[]) => void
     onClick: () => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({

@@ -1,8 +1,13 @@
+export type ContentImage = {
+    id: string
+    url: string
+}
+
 export type Container = {
     id: string
     name: string
     coverImage?: string
-    contentImages: string[]
+    contentImages: ContentImage[]
     categoryId?: string
     order?: number
 }

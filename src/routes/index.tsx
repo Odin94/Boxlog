@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ContainerGrid } from '@/components/ContainerGrid'
-import type { Container, Category } from '@/components/types'
+import type { Container, Category, ContentImage } from '@/components/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useContainers } from '@/contexts/ContainersContext'
 
@@ -49,7 +49,7 @@ function IndexComponent() {
     updateContainer(id, { coverImage: image })
   }
 
-  const handleContentImagesChange = (id: string, images: string[]) => {
+  const handleContentImagesChange = (id: string, images: ContentImage[]) => {
     updateContainer(id, { contentImages: images })
   }
 
