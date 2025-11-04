@@ -92,7 +92,10 @@ export function ContainerGrid({
         <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="container mx-auto p-6 max-w-6xl">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold">BoxLog</h1>
+                    <h1 className="text-3xl font-bold flex items-center gap-3">
+                        <img src="/boxicons-package.svg" alt="BoxLog" className="w-8 h-8" />
+                        BoxLog
+                    </h1>
                     <div className="flex gap-2">
                         <Button onClick={onCreateCategory} variant="outline">
                             <FolderPlus className="h-4 w-4 mr-2" />
