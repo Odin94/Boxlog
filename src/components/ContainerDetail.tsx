@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
+import { DndContext, closestCenter } from "@dnd-kit/core"
+import type { DragEndEvent } from "@dnd-kit/core"
+import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight } from "lucide-react"
+import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
 import type { Container, ContentImage, Category } from "@/components/types"
 
 type ContainerDetailProps = {
@@ -19,6 +23,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const [isDragging, setIsDragging] = useState(false)
     const [imagesToRemove, setImagesToRemove] = useState<Set<string>>(new Set())
     const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
+    const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -96,6 +101,31 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const handleNameSubmit = () => {
         onNameChange(container.id, nameValue)
         setIsEditingName(false)
+    }
+
+    const handleReorderImages = (event: DragEndEvent) => {
+        const { active, over } = event
+        setActiveDragId(null)
+
+        if (!over || active.id === over.id) return
+
+        const visibleImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
+        const oldIndex = visibleImages.findIndex((img) => img.id === active.id)
+        const newIndex = visibleImages.findIndex((img) => img.id === over.id)
+
+        if (oldIndex === -1 || newIndex === -1) return
+
+        const reorderedImages = [...visibleImages]
+        const [movedImage] = reorderedImages.splice(oldIndex, 1)
+        reorderedImages.splice(newIndex, 0, movedImage)
+
+        // Reconstruct the full array in the new order
+        const allImages = [...container.contentImages]
+        const finalOrder = reorderedImages.map((img) => {
+            return allImages.find((orig) => orig.id === img.id)!
+        })
+
+        onContentImagesChange(container.id, finalOrder)
     }
 
     const openLightbox = (imageId: string) => {
@@ -195,49 +225,34 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             </div>
 
             {(container.contentImages.length > 0 || imagesToRemove.size > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    <AnimatePresence>
-                        {container.contentImages
-                            .map((image, index) => ({ image, index }))
-                            .filter(({ image }) => !imagesToRemove.has(image.id))
-                            .map(({ image, index }) => (
-                                <motion.div
-                                    key={image.id}
-                                    layout
-                                    initial={{ opacity: 0, scale: 0.8 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{
-                                        opacity: 0,
-                                        scale: 0.8,
-                                        x: -100,
-                                        rotate: -10,
-                                        transition: { duration: 0.3, ease: "easeInOut" },
-                                    }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 300,
-                                        damping: 30,
-                                        layout: { duration: 0.3 },
-                                    }}
-                                    className="relative group cursor-pointer"
-                                    onClick={() => openLightbox(image.id)}
-                                >
-                                    <img src={image.url} alt={`Content ${index + 1}`} className="w-full h-64 object-cover rounded-lg" />
-                                    <motion.button
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleRemoveImage(index)
-                                        }}
-                                        className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                        whileHover={{ scale: 1.1 }}
-                                        whileTap={{ scale: 0.9 }}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </motion.button>
-                                </motion.div>
-                            ))}
-                    </AnimatePresence>
-                </div>
+                <DndContext
+                    collisionDetection={closestCenter}
+                    onDragStart={(e) => setActiveDragId(e.active.id as string)}
+                    onDragEnd={handleReorderImages}
+                >
+                    <SortableContext
+                        items={container.contentImages.filter((img) => !imagesToRemove.has(img.id)).map((img) => img.id)}
+                        strategy={rectSortingStrategy}
+                    >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                            <AnimatePresence>
+                                {container.contentImages
+                                    .map((image, index) => ({ image, index }))
+                                    .filter(({ image }) => !imagesToRemove.has(image.id))
+                                    .map(({ image, index }) => (
+                                        <SortableImageItem
+                                            key={image.id}
+                                            image={image}
+                                            index={index}
+                                            isDragging={activeDragId === image.id}
+                                            onOpenLightbox={() => openLightbox(image.id)}
+                                            onRemove={() => handleRemoveImage(index)}
+                                        />
+                                    ))}
+                            </AnimatePresence>
+                        </div>
+                    </SortableContext>
+                </DndContext>
             )}
             <div
                 className={`text-center py-12 border-2 border-dashed rounded-lg transition-colors ${
@@ -330,5 +345,75 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                 )}
             </AnimatePresence>
         </div>
+    )
+}
+
+type SortableImageItemProps = {
+    image: ContentImage
+    index: number
+    isDragging: boolean
+    onOpenLightbox: () => void
+    onRemove: () => void
+}
+
+function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove }: SortableImageItemProps) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+        id: image.id,
+    })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    }
+
+    return (
+        <motion.div
+            ref={setNodeRef}
+            style={style}
+            layout
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{
+                opacity: 0,
+                scale: 0.8,
+                x: -100,
+                rotate: -10,
+                transition: { duration: 0.3, ease: "easeInOut" },
+            }}
+            transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+                layout: { duration: 0.3 },
+            }}
+            className="relative group"
+        >
+            <div
+                {...attributes}
+                {...listeners}
+                className="absolute top-2 left-2 bg-background/80 hover:bg-background rounded-full p-1.5 cursor-grab active:cursor-grabbing z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <img
+                src={image.url}
+                alt={`Content ${index + 1}`}
+                className="w-full h-64 object-cover rounded-lg cursor-pointer"
+                onClick={onOpenLightbox}
+            />
+            <motion.button
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onRemove()
+                }}
+                className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+            >
+                <X className="h-4 w-4" />
+            </motion.button>
+        </motion.div>
     )
 }
