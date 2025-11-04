@@ -2,13 +2,13 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { X } from "lucide-react"
 
-interface DialogProps {
+type DialogProps = {
   open?: boolean
   onOpenChange?: (open: boolean) => void
   children: React.ReactNode
 }
 
-interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
+type DialogContentProps = React.HTMLAttributes<HTMLDivElement> & {
   onClose?: () => void
 }
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ContainerGrid } from '@/components/ContainerGrid'
-import type { Container } from '@/components/types'
+import type { Container, Category } from '@/components/types'
 import { useNavigate } from '@tanstack/react-router'
 import { useContainers } from '@/contexts/ContainersContext'
 
@@ -10,7 +10,19 @@ export const Route = createFileRoute('/')({
 
 function IndexComponent() {
   const navigate = useNavigate()
-  const { containers, addContainer, updateContainer } = useContainers()
+  const {
+    containers,
+    categories,
+    addContainer,
+    updateContainer,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    moveContainerToCategory,
+    reorderContainers,
+    moveCategoryUp,
+    moveCategoryDown,
+  } = useContainers()
 
   const handleCreateContainer = () => {
     const newContainer: Container = {
@@ -19,6 +31,14 @@ function IndexComponent() {
       contentImages: [],
     }
     addContainer(newContainer)
+  }
+
+  const handleCreateCategory = () => {
+    const newCategory: Category = {
+      id: Date.now().toString(),
+      name: 'New Category',
+    }
+    addCategory(newCategory)
   }
 
   const handleNameChange = (id: string, name: string) => {
@@ -33,6 +53,10 @@ function IndexComponent() {
     updateContainer(id, { contentImages: images })
   }
 
+  const handleCategoryNameChange = (id: string, name: string) => {
+    updateCategory(id, { name })
+  }
+
   const handleContainerClick = (container: Container) => {
     navigate({ to: '/boxes/$id', params: { id: container.id } })
   }
@@ -40,11 +64,19 @@ function IndexComponent() {
   return (
     <ContainerGrid
       containers={containers}
+      categories={categories}
       onContainerClick={handleContainerClick}
       onCreateContainer={handleCreateContainer}
+      onCreateCategory={handleCreateCategory}
       onNameChange={handleNameChange}
       onCoverImageChange={handleCoverImageChange}
       onContentImagesChange={handleContentImagesChange}
+      onCategoryNameChange={handleCategoryNameChange}
+      onDeleteCategory={deleteCategory}
+      onMoveContainerToCategory={moveContainerToCategory}
+      onReorderContainers={reorderContainers}
+      onMoveCategoryUp={moveCategoryUp}
+      onMoveCategoryDown={moveCategoryDown}
     />
   )
 }

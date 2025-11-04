@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Camera, Edit2, Image as ImageIcon } from "lucide-react"
 
-interface ContainerCardProps {
+type ContainerCardProps = {
   container: {
     id: string
     name: string
