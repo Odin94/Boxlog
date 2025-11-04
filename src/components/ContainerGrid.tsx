@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Plus, FolderPlus } from "lucide-react"
 import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { CategorySection } from "./CategorySection"
 import type { Container, Category } from "@/components/types"
 
@@ -128,23 +129,33 @@ export function ContainerGrid({
                             )}
 
                             {/* Categorized sections */}
-                            {categorizedContainers.map(({ category, containers: categoryContainers, canMoveUp, canMoveDown }) => (
-                                <CategorySection
-                                    key={category.id}
-                                    category={category}
-                                    containers={categoryContainers}
-                                    onContainerClick={onContainerClick}
-                                    onNameChange={onNameChange}
-                                    onCoverImageChange={onCoverImageChange}
-                                    onContentImagesChange={onContentImagesChange}
-                                    onCategoryNameChange={onCategoryNameChange}
-                                    onDeleteCategory={onDeleteCategory}
-                                    onMoveCategoryUp={onMoveCategoryUp}
-                                    onMoveCategoryDown={onMoveCategoryDown}
-                                    canMoveUp={canMoveUp}
-                                    canMoveDown={canMoveDown}
-                                />
-                            ))}
+                            <AnimatePresence>
+                                {categorizedContainers.map(({ category, containers: categoryContainers, canMoveUp, canMoveDown }) => (
+                                    <motion.div
+                                        key={category.id}
+                                        layout
+                                        initial={{ opacity: 0, y: -20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                    >
+                                        <CategorySection
+                                            category={category}
+                                            containers={categoryContainers}
+                                            onContainerClick={onContainerClick}
+                                            onNameChange={onNameChange}
+                                            onCoverImageChange={onCoverImageChange}
+                                            onContentImagesChange={onContentImagesChange}
+                                            onCategoryNameChange={onCategoryNameChange}
+                                            onDeleteCategory={onDeleteCategory}
+                                            onMoveCategoryUp={onMoveCategoryUp}
+                                            onMoveCategoryDown={onMoveCategoryDown}
+                                            canMoveUp={canMoveUp}
+                                            canMoveDown={canMoveDown}
+                                        />
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
                         </>
                     )}
                 </SortableContext>
