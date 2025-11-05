@@ -61,7 +61,7 @@ function VisualInventoryComponent() {
 
     const handleImageClick = (containerId: string | undefined) => {
         if (containerId) {
-            navigate({ to: "/boxes/$id", params: { id: containerId } })
+            navigate({ to: "/containers/$id", params: { id: containerId } })
         }
     }
 

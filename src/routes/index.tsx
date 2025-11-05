@@ -103,7 +103,7 @@ function IndexComponent() {
     }
 
     const handleContainerClick = (container: Container) => {
-        navigate({ to: "/boxes/$id", params: { id: container.id } })
+        navigate({ to: "/containers/$id", params: { id: container.id } })
     }
 
     const handleDeleteContainerClick = (containerId: string) => {

@@ -52,6 +52,24 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
         })
     }, [container.contentImages])
 
+    // Clean up imagesToRemove when images are no longer in container.contentImages
+    // This happens when the database sync completes after deletion
+    useEffect(() => {
+        setImagesToRemove((prev) => {
+            const imageIds = new Set(container.contentImages.map((img) => img.id))
+            const next = new Set<string>()
+            prev.forEach((id) => {
+                // Only keep IDs that are still in the removal set but not yet synced
+                // If an image ID is in imagesToRemove but not in container.contentImages,
+                // it means the database sync has removed it, so we can remove it from imagesToRemove
+                if (imageIds.has(id)) {
+                    next.add(id)
+                }
+            })
+            return next
+        })
+    }, [container.contentImages])
+
     const processFiles = async (files: File[]) => {
         if (files.length === 0 || !container.id) return
 
@@ -136,16 +154,9 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             }
         }
 
-        // After animation completes, actually remove from array
-        setTimeout(() => {
-            const newImages = container.contentImages.filter((img) => img.id !== imageToRemove.id)
-            onContentImagesChange(container.id!, newImages)
-            setImagesToRemove((prev) => {
-                const next = new Set(prev)
-                next.delete(imageToRemove.id)
-                return next
-            })
-        }, 300) // Match animation duration
+        // Don't call onContentImagesChange - let the database sync handle the update
+        // This prevents double animations. The image will be removed from container.contentImages
+        // when the database sync completes, and we'll clean up imagesToRemove in a useEffect
     }
 
     const handleNameSubmit = () => {

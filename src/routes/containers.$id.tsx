@@ -5,11 +5,11 @@ import { useAuth } from "@clerk/clerk-react"
 import { useEffect } from "react"
 import type { ContentImage } from "@/components/types"
 
-export const Route = createFileRoute("/boxes/$id")({
-    component: BoxDetailComponent,
+export const Route = createFileRoute("/containers/$id")({
+    component: ContainerDetailComponent,
 })
 
-function BoxDetailComponent() {
+function ContainerDetailComponent() {
     const { id } = Route.useParams()
     const navigate = useNavigate()
     const { containers, categories, updateContainer } = useContainers()
