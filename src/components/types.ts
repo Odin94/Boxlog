@@ -4,7 +4,7 @@ export type ContentImage = {
 }
 
 export type Container = {
-    id: string
+    id?: string
     name: string
     coverImage?: string
     contentImages: ContentImage[]

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
 import type { Container, ContentImage, Category } from "@/components/types"
+import { useWriteImages } from "@/db/image_db"
 
 type ContainerDetailProps = {
     container: Container
@@ -24,6 +25,8 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const [imagesToRemove, setImagesToRemove] = useState<Set<string>>(new Set())
     const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
+    const [isUploading, setIsUploading] = useState(false)
+    const { uploadImage, deleteImage } = useWriteImages()
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -32,26 +35,41 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
         }
     }, [container.name, isEditingName])
 
-    const processFiles = (files: File[]) => {
-        if (files.length > 0) {
-            const imageFiles = files.filter((file) => file.type.startsWith("image/"))
-            if (imageFiles.length === 0) return
+    const processFiles = async (files: File[]) => {
+        if (files.length === 0 || !container.id) return
 
-            const readers = imageFiles.map((file) => {
-                return new Promise<{ id: string; url: string }>((resolve) => {
-                    const reader = new FileReader()
-                    reader.onload = (event) => {
-                        const url = event.target?.result as string
-                        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-                        resolve({ id, url })
-                    }
-                    reader.readAsDataURL(file)
-                })
-            })
+        const imageFiles = files.filter((file) => file.type.startsWith("image/"))
+        if (imageFiles.length === 0) return
 
-            Promise.all(readers).then((images) => {
-                onContentImagesChange(container.id, [...container.contentImages, ...images])
-            })
+        setIsUploading(true)
+
+        try {
+            // Upload files sequentially to maintain order
+            const uploadedImages: ContentImage[] = []
+            const currentImageCount = container.contentImages.filter((img) => !imagesToRemove.has(img.id)).length
+
+            for (let i = 0; i < imageFiles.length; i++) {
+                const file = imageFiles[i]
+                const orderingIndex = currentImageCount + i
+
+                const result = await uploadImage(file, container.id, orderingIndex)
+
+                if (result.status === "success" && result.image) {
+                    uploadedImages.push(result.image)
+                } else {
+                    console.error("Failed to upload image:", result.error)
+                }
+            }
+
+            // Update container with new images
+            if (uploadedImages.length > 0) {
+                const existingImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
+                onContentImagesChange(container.id, [...existingImages, ...uploadedImages])
+            }
+        } catch (error) {
+            console.error("Error uploading images:", error)
+        } finally {
+            setIsUploading(false)
         }
     }
 
@@ -81,10 +99,25 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
         processFiles(files)
     }
 
-    const handleRemoveImage = (index: number) => {
+    const handleRemoveImage = async (index: number) => {
         const imageToRemove = container.contentImages[index]
         // Mark image for removal - this will trigger AnimatePresence exit animation
         setImagesToRemove((prev) => new Set(prev).add(imageToRemove.id))
+
+        // Delete from Supabase if image has an ID
+        if (imageToRemove.id) {
+            const result = await deleteImage(imageToRemove.id)
+            if (result.status !== "success") {
+                console.error("Failed to delete image from Supabase:", result.error)
+                // Remove from removal set if deletion failed
+                setImagesToRemove((prev) => {
+                    const next = new Set(prev)
+                    next.delete(imageToRemove.id)
+                    return next
+                })
+                return
+            }
+        }
 
         // After animation completes, actually remove from array
         setTimeout(() => {
@@ -217,10 +250,21 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             </div>
 
             <div className="mb-6">
-                <label className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors">
+                <label
+                    className={`inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md cursor-pointer hover:bg-primary/90 transition-colors ${
+                        isUploading ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                >
                     <ImagePlus className="h-4 w-4" />
-                    Add Content Photos
-                    <input type="file" accept="image/*" multiple onChange={handleContentImagesUpload} className="hidden" />
+                    {isUploading ? "Uploading..." : "Add Content Photos"}
+                    <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleContentImagesUpload}
+                        disabled={isUploading}
+                        className="hidden"
+                    />
                 </label>
             </div>
 

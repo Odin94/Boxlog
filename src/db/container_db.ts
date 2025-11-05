@@ -29,7 +29,6 @@ function mapDatabaseContainerToContainer(dbContainer: DatabaseContainer): Contai
         name: dbContainer.name,
         coverImage: dbContainer.title_image_path || undefined,
         categoryId: dbContainer.category_id?.toString(),
-        // TODOdin: Load content images from the database
         contentImages: [],
     }
 }
@@ -53,13 +52,82 @@ export function useReadContainers() {
                 setStatus("loading")
                 setError(null)
 
-                const { data, error: fetchError } = await supabase.from("Containers").select("*")
+                const { data: containersData, error: fetchError } = await supabase.from("Containers").select("*")
 
                 if (fetchError) {
                     throw fetchError
                 }
 
-                const mappedContainers = (data || []).map(mapDatabaseContainerToContainer)
+                // Fetch images for all containers
+                const containerIds = (containersData || []).map((c) => c.id)
+                const { data: imagesData, error: imagesError } = await supabase
+                    .from("Images")
+                    .select("*")
+                    .in("container_id", containerIds)
+                    .order("ordering_index", { ascending: true })
+
+                if (imagesError) {
+                    throw imagesError
+                }
+
+                // Group images by container_id
+                type DatabaseImage = {
+                    id: number
+                    path: string
+                    container_id: number
+                    ordering_index: number
+                    created_at: string
+                    clerk_user_id: string
+                }
+                const imagesByContainer = new Map<number, DatabaseImage[]>()
+                ;(imagesData || []).forEach((img: DatabaseImage) => {
+                    const existing = imagesByContainer.get(img.container_id) || []
+                    existing.push(img)
+                    imagesByContainer.set(img.container_id, existing)
+                })
+
+                // Get signed URLs for all images
+                const allImagePaths: string[] = []
+                
+                containersData?.forEach((dbContainer) => {
+                    const images = imagesByContainer.get(dbContainer.id) || []
+                    images.forEach((img) => {
+                        allImagePaths.push(img.path)
+                    })
+                })
+
+                // Batch create signed URLs for all images
+                let signedUrlsMap = new Map<string, string>()
+                if (allImagePaths.length > 0) {
+                    const { data: urlsData, error: urlError } = await supabase.storage
+                        .from("container_images")
+                        .createSignedUrls(allImagePaths, 3600) // 3600 seconds = 1 hour
+
+                    if (urlError) {
+                        throw urlError
+                    }
+
+                    // Map paths to signed URLs
+                    allImagePaths.forEach((path, index) => {
+                        const signedUrl = urlsData?.[index]?.signedUrl || ""
+                        signedUrlsMap.set(path, signedUrl)
+                    })
+                }
+
+                // Map containers with their images using signed URLs
+                const mappedContainers = (containersData || []).map((dbContainer) => {
+                    const container = mapDatabaseContainerToContainer(dbContainer)
+                    const images = imagesByContainer.get(dbContainer.id) || []
+                    container.contentImages = images.map((img) => {
+                        const signedUrl = signedUrlsMap.get(img.path) || ""
+                        return {
+                            id: img.id.toString(),
+                            url: signedUrl,
+                        }
+                    })
+                    return container
+                })
+
                 setContainers(mappedContainers)
                 setStatus("success")
             } catch (err) {

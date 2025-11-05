@@ -23,10 +23,12 @@ type DatabaseImage = {
     clerk_user_id: string
 }
 
-function mapDatabaseImageToContentImage(dbImage: DatabaseImage): ContentImage {
+const STORAGE_BUCKET = "container_images"
+
+function mapDatabaseImageToContentImage(dbImage: DatabaseImage, publicUrl: string): ContentImage {
     return {
         id: dbImage.id.toString(),
-        url: dbImage.path,
+        url: publicUrl,
     }
 }
 
@@ -64,7 +66,26 @@ export function useReadImages(containerId: string) {
                     throw fetchError
                 }
 
-                const mappedImages = (data || []).map(mapDatabaseImageToContentImage)
+                if (!data || data.length === 0) {
+                    setImages([])
+                    setStatus("success")
+                    return
+                }
+
+                // Get signed URLs for all file paths
+                const filePaths = data.map((dbImage) => dbImage.path)
+                const { data: urlsData, error: urlError } = await supabase.storage.from(STORAGE_BUCKET).createSignedUrls(filePaths, 3600) // 3600 seconds = 1 hour
+
+                if (urlError) {
+                    throw urlError
+                }
+
+                // Map images with signed URLs
+                const mappedImages = data.map((dbImage, index) => {
+                    const signedUrl = urlsData?.[index]?.signedUrl || ""
+                    return mapDatabaseImageToContentImage(dbImage, signedUrl)
+                })
+
                 setImages(mappedImages)
                 setStatus("success")
             } catch (err) {
@@ -82,12 +103,14 @@ export function useReadImages(containerId: string) {
 
 export function useWriteImages() {
     const supabase = useSupabaseClient()
+    const { user } = useUser()
 
     const upsertImage = useCallback(
         async (
-            image: ContentImage,
+            file: File,
             containerId: string,
-            orderingIndex: number
+            orderingIndex: number,
+            existingImageId?: string
         ): Promise<{ status: Status; error: Error | null; image: ContentImage | null }> => {
             if (!supabase) {
                 return {
@@ -97,20 +120,70 @@ export function useWriteImages() {
                 }
             }
 
+            if (!user) {
+                return {
+                    status: "error",
+                    error: new Error("User not authenticated"),
+                    image: null,
+                }
+            }
+
             try {
-                const imageId = image.id ? parseInt(image.id, 10) : null
                 const containerIdNum = parseInt(containerId, 10)
                 if (isNaN(containerIdNum)) {
                     throw new Error("Invalid container ID")
                 }
 
-                const isUpdate = imageId && !isNaN(imageId) && imageId < 2147483647
+                // Get user ID from Clerk (matches auth.jwt() ->> 'sub'::text)
+                const userId = user.id
+
+                // Get file extension
+                const lastDotIndex = file.name.lastIndexOf(".")
+                const fileExtension = lastDotIndex > 0 ? file.name.substring(lastDotIndex + 1) : "jpg"
+                const baseFileName = lastDotIndex > 0 ? file.name.substring(0, lastDotIndex) : file.name
+
+                // Generate unique file path: userId/containerId/timestamp_filename.extension
+                const timestamp = Date.now()
+                const sanitizedFileName = baseFileName.replace(/[^a-zA-Z0-9.-]/g, "_")
+                const filePath = `${userId}/${containerId}/${timestamp}_${sanitizedFileName}.${fileExtension}`
+
+                // Upload file to storage
+                const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(filePath, file, {
+                    upsert: false,
+                })
+
+                if (uploadError) {
+                    throw uploadError
+                }
+
+                const storagePath = filePath
+
+                // Get signed URL for the uploaded file
+                const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                    .from(STORAGE_BUCKET)
+                    .createSignedUrl(filePath, 3600) // 3600 seconds = 1 hour
+
+                if (signedUrlError) {
+                    // If signed URL creation fails, delete the uploaded file
+                    await supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
+                    throw signedUrlError
+                }
+
+                const signedUrl = signedUrlData?.signedUrl || ""
+
+                const isUpdate = existingImageId && !isNaN(parseInt(existingImageId, 10))
 
                 if (isUpdate) {
+                    const imageId = parseInt(existingImageId!, 10)
+
+                    // Get old image path to delete it
+                    const { data: oldImageData } = await supabase.from("Images").select("path").eq("id", imageId).single()
+
+                    // Update database with new path
                     const { data, error: updateError } = await supabase
                         .from("Images")
                         .update({
-                            path: image.url,
+                            path: storagePath,
                             ordering_index: orderingIndex,
                         })
                         .eq("id", imageId)
@@ -118,19 +191,27 @@ export function useWriteImages() {
                         .single()
 
                     if (updateError) {
+                        // If update fails, delete the uploaded file
+                        await supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
                         throw updateError
+                    }
+
+                    // Delete old file from storage if it exists
+                    if (oldImageData && oldImageData.path && oldImageData.path !== storagePath) {
+                        await supabase.storage.from(STORAGE_BUCKET).remove([oldImageData.path])
                     }
 
                     return {
                         status: "success",
                         error: null,
-                        image: data ? mapDatabaseImageToContentImage(data) : null,
+                        image: data ? mapDatabaseImageToContentImage(data, signedUrl) : null,
                     }
                 } else {
+                    // Insert new image record
                     const { data, error: insertError } = await supabase
                         .from("Images")
                         .insert({
-                            path: image.url,
+                            path: storagePath,
                             container_id: containerIdNum,
                             ordering_index: orderingIndex,
                         })
@@ -138,13 +219,15 @@ export function useWriteImages() {
                         .single()
 
                     if (insertError) {
+                        // If insert fails, delete the uploaded file
+                        await supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
                         throw insertError
                     }
 
                     return {
                         status: "success",
                         error: null,
-                        image: data ? mapDatabaseImageToContentImage(data) : null,
+                        image: data ? mapDatabaseImageToContentImage(data, signedUrl) : null,
                     }
                 }
             } catch (err) {
@@ -156,7 +239,7 @@ export function useWriteImages() {
                 }
             }
         },
-        [supabase]
+        [supabase, user]
     )
 
     const deleteImage = useCallback(
@@ -174,10 +257,23 @@ export function useWriteImages() {
                     throw new Error("Invalid image ID")
                 }
 
+                // Get image path before deleting from database
+                const { data: imageData, error: fetchError } = await supabase.from("Images").select("path").eq("id", id).single()
+
+                if (fetchError) {
+                    throw fetchError
+                }
+
+                // Delete from database
                 const { error: deleteError } = await supabase.from("Images").delete().eq("id", id)
 
                 if (deleteError) {
                     throw deleteError
+                }
+
+                // Delete file from storage
+                if (imageData && imageData.path) {
+                    await supabase.storage.from(STORAGE_BUCKET).remove([imageData.path])
                 }
 
                 return {
@@ -195,8 +291,20 @@ export function useWriteImages() {
         [supabase]
     )
 
+    const uploadImage = useCallback(
+        async (
+            file: File,
+            containerId: string,
+            orderingIndex: number
+        ): Promise<{ status: Status; error: Error | null; image: ContentImage | null }> => {
+            return upsertImage(file, containerId, orderingIndex)
+        },
+        [upsertImage]
+    )
+
     return {
         upsertImage,
+        uploadImage,
         deleteImage,
     }
 }
