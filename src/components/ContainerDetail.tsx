@@ -27,9 +27,10 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
-    const { uploadImage, deleteImage, updateImageOrder } = useWriteImages()
+    const { uploadImage, deleteImage, updateImageOrder, updateImageDescription } = useWriteImages()
     const [imageLoadingStates, setImageLoadingStates] = useState<Map<string, boolean>>(new Map())
     const [draggedImage, setDraggedImage] = useState<ContentImage | null>(null)
+    const [editingDescriptionId, setEditingDescriptionId] = useState<string | null>(null)
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -327,6 +328,18 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                                                 })
                                             }}
                                             isLoading={imageLoadingStates.get(image.id) ?? true}
+                                            onUpdateDescription={async (imageId, description) => {
+                                                await updateImageDescription(imageId, description)
+                                                // Update local state
+                                                const updatedImages = container.contentImages.map((img) =>
+                                                    img.id === imageId ? { ...img, description } : img
+                                                )
+                                                onContentImagesChange(container.id!, updatedImages)
+                                                setEditingDescriptionId(null)
+                                            }}
+                                            editingDescriptionId={editingDescriptionId}
+                                            onStartEditDescription={(imageId) => setEditingDescriptionId(imageId)}
+                                            onCancelEditDescription={() => setEditingDescriptionId(null)}
                                         />
                                     ))}
                                 {isUploading && (
@@ -462,9 +475,33 @@ type SortableImageItemProps = {
     onRemove: () => void
     onImageLoad?: (id: string) => void
     isLoading?: boolean
+    onUpdateDescription?: (imageId: string, description: string) => void
+    editingDescriptionId?: string | null
+    onStartEditDescription?: (imageId: string) => void
+    onCancelEditDescription?: () => void
 }
 
-function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove, onImageLoad, isLoading = false }: SortableImageItemProps) {
+function SortableImageItem({
+    image,
+    index,
+    isDragging,
+    onOpenLightbox,
+    onRemove,
+    onImageLoad,
+    isLoading = false,
+    onUpdateDescription,
+    editingDescriptionId,
+    onStartEditDescription,
+    onCancelEditDescription,
+}: SortableImageItemProps) {
+    const [descriptionValue, setDescriptionValue] = useState(image.description || "")
+    const isEditing = editingDescriptionId === image.id
+
+    useEffect(() => {
+        if (!isEditing) {
+            setDescriptionValue(image.description || "")
+        }
+    }, [image.description, isEditing])
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
         id: image.id,
     })
@@ -535,6 +572,33 @@ function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove,
             >
                 <X className="h-4 w-4" />
             </motion.button>
+            {/* Description editing */}
+            <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                {isEditing ? (
+                    <Input
+                        value={descriptionValue}
+                        onChange={(e) => setDescriptionValue(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                onUpdateDescription?.(image.id, descriptionValue)
+                            } else if (e.key === "Escape") {
+                                onCancelEditDescription?.()
+                            }
+                        }}
+                        onBlur={() => onUpdateDescription?.(image.id, descriptionValue)}
+                        placeholder="Add description..."
+                        className="text-xs h-7"
+                        autoFocus
+                    />
+                ) : (
+                    <div
+                        className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors min-h-6 flex items-center"
+                        onClick={() => onStartEditDescription?.(image.id)}
+                    >
+                        {image.description || <span className="italic">Click to add description...</span>}
+                    </div>
+                )}
+            </div>
         </motion.div>
     )
 }

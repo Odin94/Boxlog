@@ -4,6 +4,7 @@
 //     path text not null,
 //     container_id bigint not null,
 //     ordering_index bigint not null,
+//     description text null,
 //     clerk_user_id text not null default (auth.jwt () ->> 'sub'::text),
 //     constraint Images_pkey primary key (id),
 //     constraint Images_container_id_fkey foreign KEY (container_id) references "Containers" (id) on delete CASCADE
@@ -19,6 +20,7 @@ type DatabaseImage = {
     path: string
     container_id: number
     ordering_index: number
+    description: string | null
     created_at: string
     clerk_user_id: string
 }
@@ -29,6 +31,7 @@ function mapDatabaseImageToContentImage(dbImage: DatabaseImage, publicUrl: strin
     return {
         id: dbImage.id.toString(),
         url: publicUrl,
+        description: dbImage.description || undefined,
     }
 }
 
@@ -326,10 +329,50 @@ export function useWriteImages() {
         [supabase]
     )
 
+    const updateImageDescription = useCallback(
+        async (imageId: string, description: string): Promise<{ status: Status; error: Error | null }> => {
+            if (!supabase) {
+                return {
+                    status: "error",
+                    error: new Error("Supabase client not available"),
+                }
+            }
+
+            try {
+                const id = parseInt(imageId, 10)
+                if (isNaN(id)) {
+                    throw new Error("Invalid image ID")
+                }
+
+                const { error: updateError } = await supabase
+                    .from("Images")
+                    .update({ description: description || null })
+                    .eq("id", id)
+
+                if (updateError) {
+                    throw updateError
+                }
+
+                return {
+                    status: "success",
+                    error: null,
+                }
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error("Failed to update image description")
+                return {
+                    status: "error",
+                    error,
+                }
+            }
+        },
+        [supabase]
+    )
+
     return {
         upsertImage,
         uploadImage,
         deleteImage,
         updateImageOrder,
+        updateImageDescription,
     }
 }

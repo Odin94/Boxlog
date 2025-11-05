@@ -76,6 +76,7 @@ export function useReadContainers() {
                     path: string
                     container_id: number
                     ordering_index: number
+                    description: string | null
                     created_at: string
                     clerk_user_id: string
                 }
@@ -123,6 +124,7 @@ export function useReadContainers() {
                         return {
                             id: img.id.toString(),
                             url: signedUrl,
+                            description: img.description || undefined,
                         }
                     })
                     return container

@@ -102,7 +102,11 @@ export function ContainerGrid({
         }
     }
 
-    const allSortableIds = ["uncategorized", ...categories.map((c) => c.id), ...containers.map((c) => c.id)]
+    const allSortableIds = [
+        "uncategorized",
+        ...categories.map((c) => c.id).filter((id): id is string => id !== undefined),
+        ...containers.map((c) => c.id).filter((id): id is string => id !== undefined),
+    ]
 
     return (
         <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -189,10 +193,15 @@ export function ContainerGrid({
                 </SortableContext>
 
                 <DragOverlay>
-                    {draggedContainer ? (
+                    {draggedContainer && draggedContainer.id ? (
                         <div className="opacity-80 rotate-2 shadow-2xl" style={{ width: "200px" }}>
                             <ContainerCard
-                                container={draggedContainer}
+                                container={{
+                                    id: draggedContainer.id,
+                                    name: draggedContainer.name,
+                                    coverImage: draggedContainer.coverImage,
+                                    contentImages: draggedContainer.contentImages,
+                                }}
                                 onNameChange={onNameChange}
                                 onCoverImageChange={onCoverImageChange}
                                 onContentImagesChange={onContentImagesChange}
