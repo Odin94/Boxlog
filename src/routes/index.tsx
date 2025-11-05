@@ -3,9 +3,10 @@ import { ContainerGrid } from "@/components/ContainerGrid"
 import type { Container, Category, ContentImage } from "@/components/types"
 import { useNavigate } from "@tanstack/react-router"
 import { useContainers } from "@/contexts/ContainersContext"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@clerk/clerk-react"
 
 export const Route = createFileRoute("/")({
     component: IndexComponent,
@@ -13,6 +14,28 @@ export const Route = createFileRoute("/")({
 
 function IndexComponent() {
     const navigate = useNavigate()
+    const { isSignedIn, isLoaded } = useAuth()
+
+    // Redirect to landing page if not signed in
+    useEffect(() => {
+        if (isLoaded && !isSignedIn) {
+            navigate({ to: "/landing" })
+        }
+    }, [isLoaded, isSignedIn, navigate])
+
+    // Show loading while checking auth
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    // Don't render if not signed in (will redirect)
+    if (!isSignedIn) {
+        return null
+    }
     const {
         containers,
         categories,
