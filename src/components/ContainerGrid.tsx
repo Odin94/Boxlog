@@ -2,6 +2,7 @@ import { DndContext, DragOverlay, closestCenter } from "@dnd-kit/core"
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Plus, FolderPlus } from "lucide-react"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -12,6 +13,8 @@ import type { Container, Category, ContentImage } from "@/components/types"
 type ContainerGridProps = {
     containers: Container[]
     categories: Category[]
+    isLoadingContainers?: boolean
+    isLoadingCategories?: boolean
     onContainerClick: (container: Container) => void
     onCreateContainer: () => void
     onCreateCategory: () => void
@@ -30,6 +33,8 @@ type ContainerGridProps = {
 export function ContainerGrid({
     containers,
     categories,
+    isLoadingContainers = false,
+    isLoadingCategories = false,
     onContainerClick,
     onCreateContainer,
     onCreateCategory,
@@ -120,7 +125,12 @@ export function ContainerGrid({
                 </div>
 
                 <SortableContext items={allSortableIds} strategy={verticalListSortingStrategy}>
-                    {containers.length === 0 && categories.length === 0 ? (
+                    {isLoadingContainers || isLoadingCategories ? (
+                        <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
+                            <Spinner className="mx-auto mb-4" size="lg" />
+                            <p className="text-muted-foreground">Loading containers and categories...</p>
+                        </div>
+                    ) : containers.length === 0 && categories.length === 0 ? (
                         <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
                             <p className="text-muted-foreground mb-4">No containers yet. Create your first container to get started!</p>
                             <Button onClick={onCreateContainer}>

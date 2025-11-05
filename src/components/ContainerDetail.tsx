@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
 import type { Container, ContentImage, Category } from "@/components/types"
 import { useWriteImages } from "@/db/image_db"
+import { Spinner } from "@/components/ui/spinner"
 
 type ContainerDetailProps = {
     container: Container
@@ -27,6 +28,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
     const { uploadImage, deleteImage } = useWriteImages()
+    const [imageLoadingStates, setImageLoadingStates] = useState<Map<string, boolean>>(new Map())
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -34,6 +36,19 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             setNameValue(container.name)
         }
     }, [container.name, isEditingName])
+
+    // Initialize loading states for new images
+    useEffect(() => {
+        setImageLoadingStates((prev) => {
+            const newLoadingStates = new Map(prev)
+            container.contentImages.forEach((img) => {
+                if (!newLoadingStates.has(img.id)) {
+                    newLoadingStates.set(img.id, true)
+                }
+            })
+            return newLoadingStates
+        })
+    }, [container.contentImages])
 
     const processFiles = async (files: File[]) => {
         if (files.length === 0 || !container.id) return
@@ -52,7 +67,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                 const file = imageFiles[i]
                 const orderingIndex = currentImageCount + i
 
-                const result = await uploadImage(file, container.id, orderingIndex)
+                const result = await uploadImage(file, container.id!, orderingIndex)
 
                 if (result.status === "success" && result.image) {
                     uploadedImages.push(result.image)
@@ -64,7 +79,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             // Update container with new images
             if (uploadedImages.length > 0) {
                 const existingImages = container.contentImages.filter((img) => !imagesToRemove.has(img.id))
-                onContentImagesChange(container.id, [...existingImages, ...uploadedImages])
+                onContentImagesChange(container.id!, [...existingImages, ...uploadedImages])
             }
         } catch (error) {
             console.error("Error uploading images:", error)
@@ -122,7 +137,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
         // After animation completes, actually remove from array
         setTimeout(() => {
             const newImages = container.contentImages.filter((img) => img.id !== imageToRemove.id)
-            onContentImagesChange(container.id, newImages)
+            onContentImagesChange(container.id!, newImages)
             setImagesToRemove((prev) => {
                 const next = new Set(prev)
                 next.delete(imageToRemove.id)
@@ -132,7 +147,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     }
 
     const handleNameSubmit = () => {
-        onNameChange(container.id, nameValue)
+        onNameChange(container.id!, nameValue)
         setIsEditingName(false)
     }
 
@@ -158,7 +173,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             return allImages.find((orig) => orig.id === img.id)!
         })
 
-        onContentImagesChange(container.id, finalOrder)
+        onContentImagesChange(container.id!, finalOrder)
     }
 
     const openLightbox = (imageId: string) => {
@@ -268,7 +283,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                 </label>
             </div>
 
-            {(container.contentImages.length > 0 || imagesToRemove.size > 0) && (
+            {(container.contentImages.length > 0 || imagesToRemove.size > 0 || isUploading) && (
                 <DndContext
                     collisionDetection={closestCenter}
                     onDragStart={(e) => setActiveDragId(e.active.id as string)}
@@ -291,8 +306,26 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                                             isDragging={activeDragId === image.id}
                                             onOpenLightbox={() => openLightbox(image.id)}
                                             onRemove={() => handleRemoveImage(index)}
+                                            onImageLoad={(id) => {
+                                                setImageLoadingStates((prev) => {
+                                                    const next = new Map(prev)
+                                                    next.set(id, false)
+                                                    return next
+                                                })
+                                            }}
+                                            isLoading={imageLoadingStates.get(image.id) ?? true}
                                         />
                                     ))}
+                                {isUploading && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.8 }}
+                                        className="relative aspect-square bg-muted rounded-lg overflow-hidden flex items-center justify-center"
+                                    >
+                                        <Spinner size="lg" />
+                                    </motion.div>
+                                )}
                             </AnimatePresence>
                         </div>
                     </SortableContext>
@@ -306,16 +339,25 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
             >
-                <ImagePlus
-                    className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`}
-                />
-                <p className={isDragging ? "text-primary font-medium" : "text-muted-foreground"}>
-                    {isDragging
-                        ? "Drop photos here"
-                        : container.contentImages.length === 0
-                          ? "No content photos yet. Add some photos to see what's inside!"
-                          : "Drag & drop photos here to add more"}
-                </p>
+                {isUploading ? (
+                    <>
+                        <Spinner className="mx-auto mb-4" size="lg" />
+                        <p className="text-primary font-medium">Uploading images...</p>
+                    </>
+                ) : (
+                    <>
+                        <ImagePlus
+                            className={`h-12 w-12 mx-auto mb-4 transition-colors ${isDragging ? "text-primary" : "text-muted-foreground"}`}
+                        />
+                        <p className={isDragging ? "text-primary font-medium" : "text-muted-foreground"}>
+                            {isDragging
+                                ? "Drop photos here"
+                                : container.contentImages.length === 0
+                                  ? "No content photos yet. Add some photos to see what's inside!"
+                                  : "Drag & drop photos here to add more"}
+                        </p>
+                    </>
+                )}
             </div>
 
             {/* Lightbox */}
@@ -398,9 +440,11 @@ type SortableImageItemProps = {
     isDragging: boolean
     onOpenLightbox: () => void
     onRemove: () => void
+    onImageLoad?: (id: string) => void
+    isLoading?: boolean
 }
 
-function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove }: SortableImageItemProps) {
+function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove, onImageLoad, isLoading = false }: SortableImageItemProps) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
         id: image.id,
     })
@@ -441,12 +485,25 @@ function SortableImageItem({ image, index, isDragging, onOpenLightbox, onRemove 
             >
                 <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
-            <img
-                src={image.url}
-                alt={`Content ${index + 1}`}
-                className="w-full h-64 object-cover rounded-lg cursor-pointer"
-                onClick={onOpenLightbox}
-            />
+            <div className="relative w-full h-64 bg-muted rounded-lg overflow-hidden">
+                {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted z-10">
+                        <Spinner size="md" />
+                    </div>
+                )}
+                <img
+                    src={image.url}
+                    alt={`Content ${index + 1}`}
+                    className={`w-full h-full object-cover cursor-pointer transition-opacity ${isLoading ? "opacity-0" : "opacity-100"}`}
+                    onClick={onOpenLightbox}
+                    onLoad={() => {
+                        onImageLoad?.(image.id)
+                    }}
+                    onError={() => {
+                        onImageLoad?.(image.id)
+                    }}
+                />
+            </div>
             <motion.button
                 onClick={(e) => {
                     e.stopPropagation()

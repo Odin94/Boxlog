@@ -7,6 +7,8 @@ import { useReadContainers, useWriteContainers } from "@/db/container_db"
 type ContainersContextType = {
     containers: Container[]
     categories: Category[]
+    isLoadingContainers: boolean
+    isLoadingCategories: boolean
     setContainers: (containers: Container[]) => void
     setCategories: (categories: Category[]) => void
     addContainer: (container: Container) => Promise<void>
@@ -218,7 +220,9 @@ export function ContainersProvider({ children }: { children: ReactNode }) {
             for (let index = 0; index < containersInCategory.length; index++) {
                 const container = containersInCategory[index]
                 if (container.order !== index) {
-                    await updateContainer(container.id, { order: index })
+                    if (container.id) {
+                        await updateContainer(container.id, { order: index })
+                    }
                 }
             }
         },
@@ -230,6 +234,9 @@ export function ContainersProvider({ children }: { children: ReactNode }) {
             value={{
                 containers,
                 categories,
+                // Show loading if status is "loading" OR if status is "idle" with no fetched data yet (hasn't started loading)
+                isLoadingContainers: containersStatus === "loading" || (containersStatus === "idle" && fetchedContainers.length === 0),
+                isLoadingCategories: categoriesStatus === "loading" || (categoriesStatus === "idle" && fetchedCategories.length === 0),
                 setContainers,
                 setCategories,
                 addContainer,

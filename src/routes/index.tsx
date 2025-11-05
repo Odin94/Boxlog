@@ -16,6 +16,8 @@ function IndexComponent() {
     const {
         containers,
         categories,
+        isLoadingContainers,
+        isLoadingCategories,
         addContainer,
         updateContainer,
         deleteContainer,
@@ -120,6 +122,8 @@ function IndexComponent() {
             <ContainerGrid
                 containers={containers}
                 categories={categories}
+                isLoadingContainers={isLoadingContainers}
+                isLoadingCategories={isLoadingCategories}
                 onContainerClick={handleContainerClick}
                 onCreateContainer={handleCreateContainer}
                 onCreateCategory={handleCreateCategory}
