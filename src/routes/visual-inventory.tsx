@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useContainers } from "@/contexts/ContainersContext"
 import { useAuth } from "@clerk/clerk-react"
 import { useEffect, useState, useMemo } from "react"
+import { motion } from "framer-motion"
 import { Camera, ImageIcon, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
@@ -14,6 +15,7 @@ function VisualInventoryComponent() {
     const { containers, isLoadingContainers } = useContainers()
     const { isSignedIn, isLoaded } = useAuth()
     const [searchQuery, setSearchQuery] = useState("")
+    const [hasAnimated, setHasAnimated] = useState(false)
 
     // Redirect to landing page if not signed in
     useEffect(() => {
@@ -44,6 +46,13 @@ function VisualInventoryComponent() {
             return item.image.description?.toLowerCase().includes(query)
         })
     }, [allContentImages, searchQuery])
+
+    // Mark that we've animated once images are loaded
+    useEffect(() => {
+        if (filteredImages.length > 0 && !hasAnimated) {
+            setHasAnimated(true)
+        }
+    }, [filteredImages.length, hasAnimated])
 
     // Show loading while checking auth
     if (!isLoaded) {
@@ -106,7 +115,21 @@ function VisualInventoryComponent() {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {filteredImages.map((item, idx) => (
-                        <div key={`${item.containerId}-${item.image.id}-${idx}`} className="flex flex-col">
+                        <motion.div
+                            key={`${item.containerId}-${item.image.id}-${idx}`}
+                            className="flex flex-col"
+                            initial={hasAnimated ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, x: -1000, y: 1000 }}
+                            animate={{ opacity: 1, x: 0, y: 0 }}
+                            transition={
+                                hasAnimated
+                                    ? { duration: 0 }
+                                    : {
+                                          duration: 0.3,
+                                          delay: idx * 0.03,
+                                          ease: [0.25, 0.46, 0.45, 0.94],
+                                      }
+                            }
+                        >
                             <button
                                 onClick={() => handleImageClick(item.containerId)}
                                 className="group relative aspect-square bg-muted rounded-lg overflow-hidden hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all cursor-pointer"
@@ -141,7 +164,7 @@ function VisualInventoryComponent() {
                                     <p className="text-xs text-muted-foreground line-clamp-2">{item.image.description}</p>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             )}
