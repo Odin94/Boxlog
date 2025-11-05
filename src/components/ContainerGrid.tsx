@@ -19,7 +19,8 @@ type ContainerGridProps = {
     onCoverImageChange: (id: string, image: string) => void
     onContentImagesChange: (id: string, images: ContentImage[]) => void
     onCategoryNameChange: (id: string, name: string) => void
-    onDeleteCategory: (id: string) => void
+    onDeleteContainer?: (id: string) => void
+    onDeleteCategory?: (id: string) => void
     onMoveContainerToCategory: (containerId: string, categoryId: string | undefined) => void
     onReorderContainers: (containerId: string, overContainerId: string) => void
     onMoveCategoryUp: (id: string) => void
@@ -36,6 +37,7 @@ export function ContainerGrid({
     onCoverImageChange,
     onContentImagesChange,
     onCategoryNameChange,
+    onDeleteContainer,
     onDeleteCategory,
     onMoveContainerToCategory,
     onReorderContainers,
@@ -138,6 +140,7 @@ export function ContainerGrid({
                                     onCoverImageChange={onCoverImageChange}
                                     onContentImagesChange={onContentImagesChange}
                                     onCategoryNameChange={onCategoryNameChange}
+                                    onDeleteContainer={onDeleteContainer}
                                 />
                             )}
 
@@ -161,6 +164,7 @@ export function ContainerGrid({
                                             onCoverImageChange={onCoverImageChange}
                                             onContentImagesChange={onContentImagesChange}
                                             onCategoryNameChange={onCategoryNameChange}
+                                            onDeleteContainer={onDeleteContainer}
                                             onDeleteCategory={onDeleteCategory}
                                             onMoveCategoryUp={onMoveCategoryUp}
                                             onMoveCategoryDown={onMoveCategoryDown}
@@ -182,6 +186,7 @@ export function ContainerGrid({
                                 onNameChange={onNameChange}
                                 onCoverImageChange={onCoverImageChange}
                                 onContentImagesChange={onContentImagesChange}
+                                onDeleteContainer={onDeleteContainer}
                                 onClick={() => {}}
                             />
                         </div>

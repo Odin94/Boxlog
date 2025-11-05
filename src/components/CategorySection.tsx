@@ -17,6 +17,7 @@ type CategorySectionProps = {
     onCoverImageChange: (id: string, image: string) => void
     onContentImagesChange: (id: string, images: ContentImage[]) => void
     onCategoryNameChange: (id: string, name: string) => void
+    onDeleteContainer?: (id: string) => void
     onDeleteCategory?: (id: string) => void
     onMoveCategoryUp?: (id: string) => void
     onMoveCategoryDown?: (id: string) => void
@@ -33,6 +34,7 @@ export function CategorySection({
     onCoverImageChange,
     onContentImagesChange,
     onCategoryNameChange,
+    onDeleteContainer,
     onDeleteCategory,
     onMoveCategoryUp,
     onMoveCategoryDown,
@@ -171,6 +173,7 @@ export function CategorySection({
                             onNameChange={onNameChange}
                             onCoverImageChange={onCoverImageChange}
                             onContentImagesChange={onContentImagesChange}
+                            onDeleteContainer={onDeleteContainer}
                             onClick={() => onContainerClick(container)}
                         />
                     ))}
@@ -186,6 +189,7 @@ function DraggableContainerCard({
     onNameChange,
     onCoverImageChange,
     onContentImagesChange,
+    onDeleteContainer,
     onClick,
 }: {
     container: Container
@@ -193,6 +197,7 @@ function DraggableContainerCard({
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
     onContentImagesChange: (id: string, images: ContentImage[]) => void
+    onDeleteContainer?: (id: string) => void
     onClick: () => void
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -229,6 +234,7 @@ function DraggableContainerCard({
                 onNameChange={onNameChange}
                 onCoverImageChange={onCoverImageChange}
                 onContentImagesChange={onContentImagesChange}
+                onDeleteContainer={onDeleteContainer}
                 onClick={onClick}
             />
         </div>

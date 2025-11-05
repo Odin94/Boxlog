@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Camera, Edit2, Image as ImageIcon } from "lucide-react"
+import { Camera, Edit2, Image as ImageIcon, Trash2 } from "lucide-react"
 
 import type { ContentImage } from "./types"
 
@@ -16,6 +16,7 @@ type ContainerCardProps = {
   onNameChange: (id: string, name: string) => void
   onCoverImageChange: (id: string, image: string) => void
   onContentImagesChange: (id: string, images: ContentImage[]) => void
+  onDeleteContainer?: (id: string) => void
   onClick: () => void
 }
 
@@ -24,6 +25,7 @@ export function ContainerCard({
   onNameChange,
   onCoverImageChange,
   onContentImagesChange,
+  onDeleteContainer,
   onClick,
 }: ContainerCardProps) {
   const [isEditingName, setIsEditingName] = useState(false)
@@ -105,17 +107,32 @@ export function ContainerCard({
             }}
           >
             <span>{container.name || "Unnamed Container"}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation()
-                setIsEditingName(true)
-              }}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsEditingName(true)
+                }}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              {onDeleteContainer && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteContainer(container.id)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </CardTitle>
         )}
       </CardHeader>

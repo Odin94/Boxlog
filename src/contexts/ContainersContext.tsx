@@ -11,6 +11,7 @@ type ContainersContextType = {
     setCategories: (categories: Category[]) => void
     addContainer: (container: Container) => Promise<void>
     updateContainer: (id: string, updates: Partial<Container>) => Promise<void>
+    deleteContainer: (id: string) => Promise<void>
     addCategory: (category: Category) => Promise<void>
     updateCategory: (id: string, updates: Partial<Category>) => Promise<void>
     deleteCategory: (id: string) => Promise<void>
@@ -75,6 +76,16 @@ export function ContainersProvider({ children }: { children: ReactNode }) {
             }
         },
         [containers, upsertContainer]
+    )
+
+    const deleteContainer = useCallback(
+        async (id: string) => {
+            const result = await deleteContainerFromDb(id)
+            if (result.status === "success") {
+                setContainers((prev) => prev.filter((c) => c.id !== id))
+            }
+        },
+        [deleteContainerFromDb]
     )
 
     const addCategory = useCallback(
@@ -223,6 +234,7 @@ export function ContainersProvider({ children }: { children: ReactNode }) {
                 setCategories,
                 addContainer,
                 updateContainer,
+                deleteContainer,
                 addCategory,
                 updateCategory,
                 deleteCategory,
