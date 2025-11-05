@@ -6,7 +6,7 @@ import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sort
 import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight, GripVertical } from "lucide-react"
+import { ArrowLeft, ImagePlus, X, ChevronLeft, ChevronRight, GripVertical, Edit2 } from "lucide-react"
 import type { Container, ContentImage, Category } from "@/components/types"
 import { useWriteImages } from "@/db/image_db"
 import { Spinner } from "@/components/ui/spinner"
@@ -284,12 +284,12 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                         />
                     </div>
                 ) : (
-                    <h1
-                        className="text-3xl font-bold mb-2 cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => setIsEditingName(true)}
-                    >
-                        {container.name || "Unnamed Container"}
-                    </h1>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-3xl font-bold mb-2">{container.name || "Unnamed Container"}</h1>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setIsEditingName(true)}>
+                            <Edit2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                 )}
             </div>
 

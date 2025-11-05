@@ -99,13 +99,7 @@ export function ContainerCard({
                         />
                     </div>
                 ) : (
-                    <CardTitle
-                        className="flex items-center justify-between text-lg"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            setIsEditingName(true)
-                        }}
-                    >
+                    <CardTitle className="flex items-center justify-between text-lg">
                         <span>{container.name || "Unnamed Container"}</span>
                         <div className="flex items-center gap-1">
                             <Button
