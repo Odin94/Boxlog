@@ -257,23 +257,11 @@ export function useWriteImages() {
                     throw new Error("Invalid image ID")
                 }
 
-                // Get image path before deleting from database
-                const { data: imageData, error: fetchError } = await supabase.from("Images").select("path").eq("id", id).single()
-
-                if (fetchError) {
-                    throw fetchError
-                }
-
-                // Delete from database
+                // Delete from database only - keep file in storage
                 const { error: deleteError } = await supabase.from("Images").delete().eq("id", id)
 
                 if (deleteError) {
                     throw deleteError
-                }
-
-                // Delete file from storage
-                if (imageData && imageData.path) {
-                    await supabase.storage.from(STORAGE_BUCKET).remove([imageData.path])
                 }
 
                 return {
