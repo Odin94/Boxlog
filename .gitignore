@@ -23,9 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# TanStack Router generated files
-src/routeTree.gen.ts
-
 # Environment variables
 .env
 .env.local
