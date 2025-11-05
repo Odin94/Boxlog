@@ -125,7 +125,7 @@ export function ContainerGrid({
                 </div>
 
                 <SortableContext items={allSortableIds} strategy={verticalListSortingStrategy}>
-                    {isLoadingContainers || isLoadingCategories ? (
+                    {(isLoadingContainers || isLoadingCategories) && containers.length === 0 && categories.length === 0 ? (
                         <div className="text-center py-12 border-2 border-dashed border-muted rounded-lg">
                             <Spinner className="mx-auto mb-4" size="lg" />
                             <p className="text-muted-foreground">Loading containers and categories...</p>

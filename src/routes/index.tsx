@@ -16,26 +16,7 @@ function IndexComponent() {
     const navigate = useNavigate()
     const { isSignedIn, isLoaded } = useAuth()
 
-    // Redirect to landing page if not signed in
-    useEffect(() => {
-        if (isLoaded && !isSignedIn) {
-            navigate({ to: "/landing" })
-        }
-    }, [isLoaded, isSignedIn, navigate])
-
-    // Show loading while checking auth
-    if (!isLoaded) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-        )
-    }
-
-    // Don't render if not signed in (will redirect)
-    if (!isSignedIn) {
-        return null
-    }
+    // All hooks must be called before any conditional returns
     const {
         containers,
         categories,
@@ -68,6 +49,27 @@ function IndexComponent() {
         categoryId: null,
         categoryName: "",
     })
+
+    // Redirect to landing page if not signed in
+    useEffect(() => {
+        if (isLoaded && !isSignedIn) {
+            navigate({ to: "/landing" })
+        }
+    }, [isLoaded, isSignedIn, navigate])
+
+    // Show loading while checking auth
+    if (!isLoaded) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
+    }
+
+    // Don't render if not signed in (will redirect)
+    if (!isSignedIn) {
+        return null
+    }
 
     const handleCreateContainer = async () => {
         const newContainer: Container = {
