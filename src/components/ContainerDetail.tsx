@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { DndContext, closestCenter } from "@dnd-kit/core"
-import type { DragEndEvent } from "@dnd-kit/core"
+import { DndContext, closestCenter, DragOverlay } from "@dnd-kit/core"
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { SortableContext, useSortable, rectSortingStrategy } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Button } from "@/components/ui/button"
@@ -27,8 +27,9 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
     const [lightboxImageId, setLightboxImageId] = useState<string | null>(null)
     const [activeDragId, setActiveDragId] = useState<string | null>(null)
     const [isUploading, setIsUploading] = useState(false)
-    const { uploadImage, deleteImage } = useWriteImages()
+    const { uploadImage, deleteImage, updateImageOrder } = useWriteImages()
     const [imageLoadingStates, setImageLoadingStates] = useState<Map<string, boolean>>(new Map())
+    const [draggedImage, setDraggedImage] = useState<ContentImage | null>(null)
 
     // Sync nameValue when container.name changes externally
     useEffect(() => {
@@ -151,9 +152,17 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
         setIsEditingName(false)
     }
 
-    const handleReorderImages = (event: DragEndEvent) => {
+    const handleDragStart = (event: DragStartEvent) => {
+        const imageId = event.active.id as string
+        const image = container.contentImages.find((img) => img.id === imageId)
+        setActiveDragId(imageId)
+        setDraggedImage(image || null)
+    }
+
+    const handleReorderImages = async (event: DragEndEvent) => {
         const { active, over } = event
         setActiveDragId(null)
+        setDraggedImage(null)
 
         if (!over || active.id === over.id) return
 
@@ -173,7 +182,15 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             return allImages.find((orig) => orig.id === img.id)!
         })
 
+        // Update local state immediately for responsive UI
         onContentImagesChange(container.id!, finalOrder)
+
+        // Update order in database for all images to reflect their new positions
+        const updates = finalOrder.map((img, index) => {
+            return updateImageOrder(img.id, index)
+        })
+
+        await Promise.all(updates)
     }
 
     const openLightbox = (imageId: string) => {
@@ -284,11 +301,7 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
             </div>
 
             {(container.contentImages.length > 0 || imagesToRemove.size > 0 || isUploading) && (
-                <DndContext
-                    collisionDetection={closestCenter}
-                    onDragStart={(e) => setActiveDragId(e.active.id as string)}
-                    onDragEnd={handleReorderImages}
-                >
+                <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleReorderImages}>
                     <SortableContext
                         items={container.contentImages.filter((img) => !imagesToRemove.has(img.id)).map((img) => img.id)}
                         strategy={rectSortingStrategy}
@@ -329,6 +342,13 @@ export function ContainerDetail({ container, categories, onBack, onNameChange, o
                             </AnimatePresence>
                         </div>
                     </SortableContext>
+                    <DragOverlay>
+                        {draggedImage ? (
+                            <div className="w-64 h-64 bg-card rounded-lg border shadow-2xl overflow-hidden opacity-90 rotate-2">
+                                <img src={draggedImage.url} alt="Dragging" className="w-full h-full object-cover" />
+                            </div>
+                        ) : null}
+                    </DragOverlay>
                 </DndContext>
             )}
             <div

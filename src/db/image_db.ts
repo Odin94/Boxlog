@@ -290,9 +290,46 @@ export function useWriteImages() {
         [upsertImage]
     )
 
+    const updateImageOrder = useCallback(
+        async (imageId: string, orderingIndex: number): Promise<{ status: Status; error: Error | null }> => {
+            if (!supabase) {
+                return {
+                    status: "error",
+                    error: new Error("Supabase client not available"),
+                }
+            }
+
+            try {
+                const id = parseInt(imageId, 10)
+                if (isNaN(id)) {
+                    throw new Error("Invalid image ID")
+                }
+
+                const { error: updateError } = await supabase.from("Images").update({ ordering_index: orderingIndex }).eq("id", id)
+
+                if (updateError) {
+                    throw updateError
+                }
+
+                return {
+                    status: "success",
+                    error: null,
+                }
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error("Failed to update image order")
+                return {
+                    status: "error",
+                    error,
+                }
+            }
+        },
+        [supabase]
+    )
+
     return {
         upsertImage,
         uploadImage,
         deleteImage,
+        updateImageOrder,
     }
 }
