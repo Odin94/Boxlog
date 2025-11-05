@@ -1,13 +1,13 @@
 /// <reference types="vite/client" />
 import { RouterProvider, createRouter } from "@tanstack/react-router"
-import React, { StrictMode } from "react"
+import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import "./style.css"
 
 import { ClerkProvider } from "@clerk/clerk-react"
 import { ContainersProvider } from "./contexts/ContainersContext"
-import { routeTree } from "./routeTree.gen"
 import { getConfig } from "./lib/config"
+import { routeTree } from "./routeTree.gen"
 
 const router = createRouter({ routeTree })
 

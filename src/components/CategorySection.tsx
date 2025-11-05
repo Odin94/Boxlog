@@ -82,7 +82,7 @@ export function CategorySection({
     }
 
     const handleNameSubmit = () => {
-        if (category) {
+        if (category?.id) {
             onCategoryNameChange(category.id, nameValue)
         }
         setIsEditingName(false)
@@ -113,34 +113,34 @@ export function CategorySection({
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsEditingName(true)}>
                     <Edit2 className="h-4 w-4" />
                 </Button>
-                {onMoveCategoryUp && (
+                {onMoveCategoryUp && category?.id && (
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => onMoveCategoryUp(category.id)}
+                        onClick={() => onMoveCategoryUp(category.id!)}
                         disabled={!canMoveUp}
                     >
                         <ChevronUp className="h-4 w-4" />
                     </Button>
                 )}
-                {onMoveCategoryDown && (
+                {onMoveCategoryDown && category?.id && (
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => onMoveCategoryDown(category.id)}
+                        onClick={() => onMoveCategoryDown(category.id!)}
                         disabled={!canMoveDown}
                     >
                         <ChevronDown className="h-4 w-4" />
                     </Button>
                 )}
-                {onDeleteCategory && (
+                {onDeleteCategory && category?.id && (
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-destructive hover:text-destructive"
-                        onClick={() => onDeleteCategory(category.id)}
+                        onClick={() => onDeleteCategory(category.id!)}
                     >
                         <Trash2 className="h-4 w-4" />
                     </Button>
@@ -165,18 +165,20 @@ export function CategorySection({
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {containers.map((container) => (
-                        <DraggableContainerCard
-                            key={container.id}
-                            container={container}
-                            activeDragId={activeDragId}
-                            onNameChange={onNameChange}
-                            onCoverImageChange={onCoverImageChange}
-                            onContentImagesChange={onContentImagesChange}
-                            onDeleteContainer={onDeleteContainer}
-                            onClick={() => onContainerClick(container)}
-                        />
-                    ))}
+                    {containers
+                        .filter((container) => container.id)
+                        .map((container) => (
+                            <DraggableContainerCard
+                                key={container.id}
+                                container={container}
+                                activeDragId={activeDragId}
+                                onNameChange={onNameChange}
+                                onCoverImageChange={onCoverImageChange}
+                                onContentImagesChange={onContentImagesChange}
+                                onDeleteContainer={onDeleteContainer}
+                                onClick={() => onContainerClick(container)}
+                            />
+                        ))}
                 </div>
             )}
         </div>
@@ -188,7 +190,6 @@ function DraggableContainerCard({
     activeDragId,
     onNameChange,
     onCoverImageChange,
-    onContentImagesChange,
     onDeleteContainer,
     onClick,
 }: {
@@ -200,6 +201,10 @@ function DraggableContainerCard({
     onDeleteContainer?: (id: string) => void
     onClick: () => void
 }) {
+    if (!container.id) {
+        return null
+    }
+
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: container.id,
     })
@@ -230,10 +235,14 @@ function DraggableContainerCard({
                 </svg>
             </div>
             <ContainerCard
-                container={container}
+                container={{
+                    id: container.id,
+                    name: container.name,
+                    coverImage: container.coverImage,
+                    contentImages: container.contentImages,
+                }}
                 onNameChange={onNameChange}
                 onCoverImageChange={onCoverImageChange}
-                onContentImagesChange={onContentImagesChange}
                 onDeleteContainer={onDeleteContainer}
                 onClick={onClick}
             />

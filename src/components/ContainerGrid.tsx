@@ -204,7 +204,6 @@ export function ContainerGrid({
                                 }}
                                 onNameChange={onNameChange}
                                 onCoverImageChange={onCoverImageChange}
-                                onContentImagesChange={onContentImagesChange}
                                 onDeleteContainer={onDeleteContainer}
                                 onClick={() => {}}
                             />

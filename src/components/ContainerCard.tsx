@@ -15,19 +15,11 @@ type ContainerCardProps = {
     }
     onNameChange: (id: string, name: string) => void
     onCoverImageChange: (id: string, image: string) => void
-    onContentImagesChange: (id: string, images: ContentImage[]) => void
     onDeleteContainer?: (id: string) => void
     onClick: () => void
 }
 
-export function ContainerCard({
-    container,
-    onNameChange,
-    onCoverImageChange,
-    onContentImagesChange,
-    onDeleteContainer,
-    onClick,
-}: ContainerCardProps) {
+export function ContainerCard({ container, onNameChange, onCoverImageChange, onDeleteContainer, onClick }: ContainerCardProps) {
     const [isEditingName, setIsEditingName] = useState(false)
     const [nameValue, setNameValue] = useState(container.name)
 
@@ -47,27 +39,6 @@ export function ContainerCard({
                 onCoverImageChange(container.id, result)
             }
             reader.readAsDataURL(file)
-        }
-    }
-
-    const handleContentImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || [])
-        if (files.length > 0) {
-            const readers = files.map((file) => {
-                return new Promise<ContentImage>((resolve) => {
-                    const reader = new FileReader()
-                    reader.onload = (event) => {
-                        const url = event.target?.result as string
-                        const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-                        resolve({ id, url })
-                    }
-                    reader.readAsDataURL(file)
-                })
-            })
-
-            Promise.all(readers).then((images) => {
-                onContentImagesChange(container.id, [...container.contentImages, ...images])
-            })
         }
     }
 
