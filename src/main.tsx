@@ -1,26 +1,30 @@
-import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
+/// <reference types="vite/client" />
 import { RouterProvider, createRouter } from "@tanstack/react-router"
+import React, { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
 import "./style.css"
 
-// Import the generated route tree
-import { routeTree } from "./routeTree.gen"
+import { ClerkProvider } from "@clerk/clerk-react"
 import { ContainersProvider } from "./contexts/ContainersContext"
+import { routeTree } from "./routeTree.gen"
+import { getConfig } from "./lib/config"
 
-// Create a new router instance
 const router = createRouter({ routeTree })
 
-// Register the router instance for type safety
 declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router
-  }
+    interface Register {
+        router: typeof router
+    }
 }
+
+const { CLERK_PUBLISHABLE_KEY } = getConfig()
 
 createRoot(document.getElementById("app")!).render(
     <StrictMode>
-        <ContainersProvider>
-            <RouterProvider router={router} />
-        </ContainersProvider>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+            <ContainersProvider>
+                <RouterProvider router={router} />
+            </ContainersProvider>
+        </ClerkProvider>
     </StrictMode>
 )

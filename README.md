@@ -2,9 +2,11 @@
 
 A simple web app to help you remember what’s stored in boxes, shelves, or any container. Create a container, give it a name (e.g., "Christmas Box"), add a cover photo of the container, and upload photos of its contents. Browse your containers in a grid and click one to see its contents.
 
-## Setup
-```bash
-npm install
+## Integrations
+* Supabase for DB  (see table schemas in `src/db/*_db.ts`)
+* Clerk for auth; integrated as external auth provider for Supabase
 
-npm run dev
-```
+## Setup
+* npm install
+* Create `.env` file with configs from `.env.sample`
+* npm run dev

@@ -13,7 +13,7 @@ export type Container = {
 }
 
 export type Category = {
-    id: string
+    id?: string
     name: string
     order?: number
 }
